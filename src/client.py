@@ -1,4 +1,5 @@
 import zmq
+import sys
 
 # TODO just send message, and that's all it needs... leave the rest to server
 def put():
@@ -22,20 +23,30 @@ def sub():
     return 
 
 def main():
+    args = sys.argv[1:]
+
+    if (len(args) < 1):
+        print("Invalid command, please enter client ID")
+        return
+
+    client_id = args[0]
+    
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.setsockopt_string(zmq.IDENTITY, "1")
+    socket.setsockopt_string(zmq.IDENTITY, client_id) 
 
     socket.connect("tcp://localhost:5559")
 
     socket.send(b"Node connecting...")
 
-    
     print("waiting...")
     message = socket.recv()
     print(message)
 
+    socket.send(b"2 SUB moda")
 
+    message = socket.recv()
+    print(message)
     # TODO: Read and parse user commands from CLI
 
     # socket.close()

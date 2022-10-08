@@ -1,5 +1,7 @@
 import zmq
+import json
 
+#topicFile = open('data.json')
 
 def put():
     # TODO: check if node is subcribed to topic, if not then ignore and warn node
@@ -27,11 +29,38 @@ def sub():
     # TODO: if topic exists and node already subscribed, ignore message and warn the node that it is already subscribed
     return 
 
-def parse_msg():
-    # TODO: Parse Message, check which operation: GET, PUT, SUB, UNSUB
+def parse_msg(socket, message):
+    # TODO: Parse Message, check which operation: GET, PUT, SUB, UNSUB, format: <nodeid> <command> <topic_name> [message]
+    # PUT msg = 1 PUT TOPIC1 MENSAGEM
+    # GET msg = 1 GET TOPIC1
+    # SUB msg = 1 SUB TOPIC1
+    # UNSUB msg = 1 SUB TOPIC1
+    tokens  = message.split(" ")
+    client_id = tokens[0]
+    operation = tokens[1]
+    topic_name = tokens[2]
 
+    if operation == "GET":
+        get(client_id, topic_name)
+               
+    if operation == "PUT":
+        m = ""
+        for i in range(3, len(tokens)):
+            m = m + " " + tokens[i]
+        put(client_id, topic_name, m)
+        
+    if operation == "SUB":
+        sub(client_id, topic_name)
 
-    return
+    if operation == "UNSUB": 
+        unsub(client_id, topic_name)
+
+    # Invalid message
+    
+    error_msg = "Invalid message, please send again in formart: <nodeid> <command> <topic_name> [message]"
+    socket.send_multipart([ bytes(client_id, 'utf-8'), b'', error_msg.encode('utf-8')])
+    
+    return -1
 
 def main():
     # exemple code from https://zguide.zeromq.org/docs/chapter2/ in rrbroker (Extended Request-Reply)
@@ -48,9 +77,11 @@ def main():
         if socks.get(socket) == zmq.POLLIN:
             message = socket.recv()
             print(message)
-            node = "1"
+            node = "2"
             msg = "Connection established"
-            # TODO: Parse the message information, parse_msg()
+            # TODO: Parse the message information, parse_msg() - message structure maybe = <nodeid> <command> [topic_name]
+
+
             socket.send_multipart([ bytes(node, 'utf-8'), b'', msg.encode('utf-8')])
             print("Connection established")
 

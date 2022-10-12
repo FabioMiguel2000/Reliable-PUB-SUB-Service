@@ -179,7 +179,7 @@ def main():
 
         if socks.get(socket) == zmq.POLLIN:
             message = socket.recv()
-            print(message)
+            print("Mensagem recebida :" ,message.decode('utf-8'))
 
             # TODO: Parse the message information, parse_msg() - message structure maybe = <nodeid> <command> [topic_name]
             parse_msg(socket, message)

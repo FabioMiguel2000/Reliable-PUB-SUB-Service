@@ -43,7 +43,7 @@ def jsonToFile():
 
 
 def put(client_id, topic_name, message, socket):
-    # TODO: check if node is subcribed to topic, if not then ignore and warn node
+    # TODO: check if if not then ignore and warn node
     # TODO: node is subscribed to this topic, then push message to all node's message queue that are subscribed to topic
 
     print(message)
@@ -73,6 +73,15 @@ def get(client_id, topic_name, socket):
 def unsub(client_id, topic_name, socket):
     # TODO: if topic was not subscribed by this node, ignore message and warn the node
     # TODO: if topic subcribed by this node, then remove node from this topic and update json file
+    
+    found = False
+    indexTopic = topicIndex(topic_name)
+    for subscriber in topicFile[indexTopic]["subscribers"]:
+            if subscriber["subscriber_id"]==client_id:
+                found=True
+
+    if (found==False):
+        msg = "Unsubscribe command successfully concluded"
 
     msg = "Unsubscribe command successfully concluded"
     socket.send_multipart(
@@ -95,10 +104,12 @@ def sub(client_id, topic_name, socket):
     # [x] TODO: if topic exists and node already subscribed, ignore message and warn the node that it is already subscribed
 
     addFlag = True
+    #indíce do tópico associado
     indexTopic = topicIndex(topic_name)
     if indexTopic >= 0:
         newSub = {"subscriber_id": client_id, "messages_id": 0}
         
+        #verify if the subscribe is already subscribed 
         for subscriber in topicFile[indexTopic]["subscribers"]:
             if subscriber["subscriber_id"]==client_id: 
                 addFlag=False

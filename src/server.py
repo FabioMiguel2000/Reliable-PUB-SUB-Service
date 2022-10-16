@@ -51,8 +51,6 @@ def jsonToFile():
 
 
 def put(clientId, topicName, message, socket):
-    # TODO: check topic exists if not then ignore and warn node
-    # TODO: Push message to all node's message queue that are subscribed to topic
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform PUT operation, topic = {topicName} does not exist!'
@@ -70,7 +68,6 @@ def put(clientId, topicName, message, socket):
 
     jsonToFile()
         
-    #mensagem não é enviada para o client
     msg = f"Put command successfully concluded, message with content = '{message}' was added to topic = {topicName}"
     sendMsg(socket, clientId, msg)
     socket.send_multipart(
@@ -81,16 +78,6 @@ def put(clientId, topicName, message, socket):
 
 
 def get(clientId, topicName, socket):
-
-    # TODO: check topic is subscribed by node and topic exists;
-    # TODO: check there is a message available for topic and node;
-    #       if there is a message then send to node, if not let the node wait or warn node there is no message (???decide which one)
-    # if not os.path.exists(f'{path}/{topic_name}.json'): # Check if topic exists
-    #     msg = f'Unable to perform GET operation, topic = {topic_name} does not exist'
-    #     socket.send_multipart(
-    #         [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
-
-
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform GET operation, topic = {topicName} does not exist!'
@@ -99,13 +86,17 @@ def get(clientId, topicName, socket):
     
     subscribers = topicFile[topicIndex]["subscribers"]
 
-    for subscriber in subscribers:  # Check if subscriber exist
+    for index, subscriber in enumerate(subscribers):  # Check if subscriber exist
         if subscriber["subscriber_id"]==clientId: 
             messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
-
+            
             messages = topicFile[topicIndex]["messages"]
             for message in messages:    # Check if associated message exists
                 if message["message_id"] == messageId:
+                    # Increment message id and save the file
+                    topicFile[topicIndex]["subscribers"][index]["messages_id"] += 1
+                    jsonToFile()
+
                     message_content = message["message_content"]
                     sendMsg(socket, clientId, message_content)
                     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")

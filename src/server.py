@@ -26,6 +26,14 @@ def fileToJson():
 
 topicFile = fileToJson()
 
+def findTopicIndex(topic_name):
+    index=0
+    for topic in topicFile:
+        if topic["topic_name"]==topic_name:
+            return index
+        index = index+1
+        
+    return -1
 
 def jsonToFile():
     # creating a new directory
@@ -57,26 +65,53 @@ def put(client_id, topic_name, message, socket):
     return
 
 
-def get(client_id, topic_name, socket):
+def get(clientId, topicName, socket):
 
     # TODO: check topic is subscribed by node and topic exists;
     # TODO: check there is a message available for topic and node;
     #       if there is a message then send to node, if not let the node wait or warn node there is no message (???decide which one)
+    # if not os.path.exists(f'{path}/{topic_name}.json'): # Check if topic exists
+    #     msg = f'Unable to perform GET operation, topic = {topic_name} does not exist'
+    #     socket.send_multipart(
+    #         [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
 
-    msg = ""
-    socket.send_multipart(
-        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+
+    topicIndex = findTopicIndex(topicName)
+    if topicIndex == -1: # Topic does not exist
+        msg = f'Unable to perform GET operation, topic = {topicName} does not exist!'
+        sendErrorMsg(socket, clientId, msg)
+    
+    subscribers = topicFile[topicIndex]["subscribers"]
+
+    for subscriber in subscribers:  # Check if subscriber exist
+        if subscriber["subscriber_id"]==clientId: 
+            messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
+
+            messages = topicFile[topicIndex]["messages"]
+            for message in messages:    # Check if associated message exists
+                if message["mesasge_id"] == messageId:
+                    message_content = message["message_content"]
+                    sendMsg(socket, clientId, message_content)
+                    return 
+            msg = f'Unable to perform GET operation, no message was found in topic = {topicName}'
+            sendErrorMsg(socket, clientId, msg)
+        
+    msg = f'Unable to perform GET operation, subscriber is not subscribed to topic = {topicName}!'
+    sendErrorMsg(socket, clientId, msg)
 
     return
 
-def topicIndex(topic_name):
-    index=0
-    for topic in topicFile:
-        if topic["topic_name"]==topic_name:
-            return index
-        index = index+1
-        
-    return -1
+def sendErrorMsg(socket, clientId, message):
+    msg = f'ERROR: {message}'
+    socket.send_multipart(
+            [bytes(clientId, 'utf-8'), b'', msg.encode('utf-8')])
+
+def sendMsg(socket, clientId, message):
+    socket.send_multipart(
+            [bytes(clientId, 'utf-8'), b'', message.encode('utf-8')])
+
+
+
 
 def unsub(client_id, topic_name, socket):
     # TODO: if topic doesn't exist, ignore message and warn the node
@@ -85,7 +120,7 @@ def unsub(client_id, topic_name, socket):
     
     msg = ""
     removeFlag = False
-    indexTopic = topicIndex(topic_name)
+    indexTopic = findTopicIndex(topic_name)
     if indexTopic >= 0:
 
         indexSub = 0
@@ -125,7 +160,7 @@ def sub(client_id, topic_name, socket):
 
     addFlag = True
     #indíce do tópico associado
-    indexTopic = topicIndex(topic_name)
+    indexTopic = findTopicIndex(topic_name)
     if indexTopic >= 0:
         newSub = {"subscriber_id": client_id, "messages_id": 0}
         
@@ -219,7 +254,7 @@ def main():
 
         if socks.get(socket) == zmq.POLLIN:
             message = socket.recv()
-            print("Mensagem recebida :" ,message.decode('utf-8'))
+            print("Message received :" ,message.decode('utf-8'))
 
             # TODO: Parse the message information, parse_msg() - message structure maybe = <nodeid> <command> [topic_name]
             parse_msg(socket, message)

@@ -69,26 +69,6 @@ def get(client_id, topic_name, socket):
 
     return
 
-
-def unsub(client_id, topic_name, socket):
-    # TODO: if topic was not subscribed by this node, ignore message and warn the node
-    # TODO: if topic subcribed by this node, then remove node from this topic and update json file
-    
-    found = False
-    indexTopic = topicIndex(topic_name)
-    for subscriber in topicFile[indexTopic]["subscribers"]:
-            if subscriber["subscriber_id"]==client_id:
-                found=True
-
-    if (found==False):
-        msg = "Unsubscribe command successfully concluded"
-
-    msg = "Unsubscribe command successfully concluded"
-    socket.send_multipart(
-        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
-
-    return
-
 def topicIndex(topic_name):
     index=0
     for topic in topicFile:
@@ -97,6 +77,46 @@ def topicIndex(topic_name):
         index = index+1
         
     return -1
+
+def unsub(client_id, topic_name, socket):
+    # TODO: if topic doesn't exist, ignore message and warn the node
+    # TODO: if topic was not subscribed by this node, ignore message and warn the node
+    # TODO: if topic subcribed by this node, then remove node from this topic and update json file
+    
+    msg = ""
+    removeFlag = False
+    indexTopic = topicIndex(topic_name)
+    if indexTopic >= 0:
+
+        indexSub = 0
+        for subscriber in topicFile[indexTopic]["subscribers"]:
+            if subscriber["subscriber_id"]==client_id: 
+                removeFlag = True
+                break
+            indexSub = indexSub + 1
+
+        print(indexSub)
+        if removeFlag : topicFile[indexTopic]["subscribers"].pop(indexSub)
+
+    else:
+        msg = "Topic doesn't exist"
+        socket.send_multipart(
+            [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+        return
+
+
+    if removeFlag:
+        jsonToFile()
+        msg = "Unsubscribe command successfully concluded"
+
+    else:
+        msg = "You were not subscribed in " + topic_name
+
+    socket.send_multipart(
+        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+
+    return
+
 
 def sub(client_id, topic_name, socket):
     # [x] TODO: if topic does not exist, then create topic (add topic and update json file) and add node to this topic

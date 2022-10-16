@@ -50,17 +50,32 @@ def jsonToFile():
     os.chdir("..")
 
 
-def put(client_id, topic_name, message, socket):
-    # TODO: check if if not then ignore and warn node
-    # TODO: node is subscribed to this topic, then push message to all node's message queue that are subscribed to topic
+def put(clientId, topicName, message, socket):
+    # TODO: check topic exists if not then ignore and warn node
+    # TODO: Push message to all node's message queue that are subscribed to topic
+    topicIndex = findTopicIndex(topicName)
+    if topicIndex == -1: # Topic does not exist
+        msg = f'Unable to perform PUT operation, topic = {topicName} does not exist!'
+        sendErrorMsg(socket, clientId, msg)
+        return -1
 
-    print(message)
+    messages = topicFile[topicIndex]["messages"]
+
+    newMessage = {
+     "message_id": 0 if messages == [] else messages[-1]["message_id"]+1,
+     "message_content": message
+    }
+
+    messages.append(newMessage)
+
+    jsonToFile()
         
-
     #mensagem não é enviada para o client
-    msg = "Put command successfully concluded"
+    msg = f"Put command successfully concluded, message with content = '{message}' was added to topic = {topicName}"
+    sendMsg(socket, clientId, msg)
     socket.send_multipart(
-        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+        [bytes(clientId, 'utf-8'), b'', msg.encode('utf-8')])
+
 
     return
 
@@ -80,6 +95,7 @@ def get(clientId, topicName, socket):
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform GET operation, topic = {topicName} does not exist!'
         sendErrorMsg(socket, clientId, msg)
+        return -1
     
     subscribers = topicFile[topicIndex]["subscribers"]
 
@@ -89,27 +105,30 @@ def get(clientId, topicName, socket):
 
             messages = topicFile[topicIndex]["messages"]
             for message in messages:    # Check if associated message exists
-                if message["mesasge_id"] == messageId:
+                if message["message_id"] == messageId:
                     message_content = message["message_content"]
                     sendMsg(socket, clientId, message_content)
-                    return 
+                    print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
+                    return 0
             msg = f'Unable to perform GET operation, no message was found in topic = {topicName}'
             sendErrorMsg(socket, clientId, msg)
+            return -1
         
     msg = f'Unable to perform GET operation, subscriber is not subscribed to topic = {topicName}!'
     sendErrorMsg(socket, clientId, msg)
 
-    return
+    return -1
 
 def sendErrorMsg(socket, clientId, message):
     msg = f'ERROR: {message}'
     socket.send_multipart(
             [bytes(clientId, 'utf-8'), b'', msg.encode('utf-8')])
+    print(msg)
 
 def sendMsg(socket, clientId, message):
     socket.send_multipart(
             [bytes(clientId, 'utf-8'), b'', message.encode('utf-8')])
-
+    print(message)
 
 
 
@@ -216,25 +235,33 @@ def parse_msg(socket, message):
 
     if operation == "GET":
         get(client_id, topic_name, socket)
+        return 0
 
     elif operation == "PUT":
         m = ""
         for i in range(3, len(tokens)):
-            m = m + " " + tokens[i]
+            if i != 3:
+                m += " "
+            m += tokens[i]
         put(client_id, topic_name, m, socket)
+        return 0
 
     elif operation == "SUB":
         sub(client_id, topic_name, socket)
+        return 0
 
     elif operation == "UNSUB":
         unsub(client_id, topic_name, socket)
+        return 0
 
     elif operation == "Node":
         connection(socket, client_id)
+        return 0
 
     # Invalid message
     error_msg = "Invalid message, please send again in formart: <nodeid> <command> <topic_name> [message]"
-    socket.send_multipart([bytes(client_id, 'utf-8'), b'', error_msg.encode('utf-8')])
+    sendErrorMsg(socket, client_id, error_msg)
+
     
     return -1
 

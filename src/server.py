@@ -81,25 +81,23 @@ def unsub(client_id, topic_name, socket):
     return
 
 def topicIndex(topic_name):
-    index=-1
+    index=0
     for topic in topicFile:
-        index = index+1
         if topic["topic_name"]==topic_name:
             return index
+        index = index+1
         
-    return index
+    return -1
 
 def sub(client_id, topic_name, socket):
     # [x] TODO: if topic does not exist, then create topic (add topic and update json file) and add node to this topic
     # [x] TODO: if topic exists and node not subscribed to this topic, then add node to this topic
     # [x] TODO: if topic exists and node already subscribed, ignore message and warn the node that it is already subscribed
 
-    print(topic_name)
-
     addFlag = True
     indexTopic = topicIndex(topic_name)
     if indexTopic >= 0:
-        newSub = {"subscriber_id": client_id, "messages_queue": []}
+        newSub = {"subscriber_id": client_id, "messages_id": 0}
         
         for subscriber in topicFile[indexTopic]["subscribers"]:
             if subscriber["subscriber_id"]==client_id: 
@@ -109,15 +107,16 @@ def sub(client_id, topic_name, socket):
 
     else:
         newTopic = {"topic_name": topic_name,
-        "subscribers": [{"subscriber_id": client_id, "messages_queue": []}],
+        "subscribers": [{"subscriber_id": client_id, "messages_id": 0}],
         "messages": []}
         topicFile.append(newTopic)
 
+    msg = ""
     if addFlag: 
         jsonToFile()
-        msg = "Subscribe command successfully concluded"
+        msg = msg + "Subscribe command successfully concluded"
     else:
-        msg = "You already subscribed in this topic" 
+        msg = msg + "You already subscribed in this topic" 
 
     print(msg)
     
@@ -127,7 +126,13 @@ def sub(client_id, topic_name, socket):
     return
 
 
+def connection(socket, client_id):
+    msg = "Connection established"
+    socket.send_multipart(
+        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+
 def parse_msg(socket, message):
+    print(message)
     # TODO: Parse Message, check which operation: GET, PUT, SUB, UNSUB, format: <nodeid> <command> <topic_name> [message]
     # PUT msg = 1 PUT TOPIC1 MENSAGEM
     # GET msg = 1 GET TOPIC1
@@ -158,6 +163,9 @@ def parse_msg(socket, message):
     elif operation == "UNSUB":
         unsub(client_id, topic_name, socket)
 
+    elif operation == "Node":
+        connection(socket, client_id)
+
     # Invalid message
     error_msg = "Invalid message, please send again in formart: <nodeid> <command> <topic_name> [message]"
     socket.send_multipart([bytes(client_id, 'utf-8'), b'', error_msg.encode('utf-8')])
@@ -168,6 +176,7 @@ def main():
     # exemple code from https://zguide.zeromq.org/docs/chapter2/ in rrbroker (Extended Request-Reply)
     context = zmq.Context()
     socket = context.socket(zmq.ROUTER)
+    socket.setsockopt(zmq.ROUTER_MANDATORY, 1)
     socket.bind("tcp://*:5559")
 
     poller = zmq.Poller()
@@ -183,11 +192,6 @@ def main():
 
             # TODO: Parse the message information, parse_msg() - message structure maybe = <nodeid> <command> [topic_name]
             parse_msg(socket, message)
-
-            node = "1"
-            msg = "Connection established"
-            socket.send_multipart(
-                [bytes(node, 'utf-8'), b'', msg.encode('utf-8')])
 
     # socket.close()
     # context.term()

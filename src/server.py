@@ -54,7 +54,7 @@ def put(clientId, topicName, message, socket):
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform PUT operation, topic = {topicName} does not exist!'
-        sendErrorMsg(socket, clientId, msg)
+        sendMsg(socket, clientId, msg)
         return -1
 
     messages = topicFile[topicIndex]["messages"]
@@ -73,42 +73,32 @@ def put(clientId, topicName, message, socket):
     socket.send_multipart(
         [bytes(clientId, 'utf-8'), b'', msg.encode('utf-8')])
 
-
     return
 
 
 def get(clientId, topicName, socket, client_message_id):
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
-        msg = f'Unable to perform GET operation, topic = {topicName} does not exist!'
-        sendErrorMsg(socket, clientId, msg)
+        msg = f'-1/Unable to perform GET operation, topic = {topicName} does not exist!'
+        sendMsg(socket, clientId, msg)
         return -1
     
     messages = topicFile[topicIndex]["messages"]
 
     if len(messages) == 0: # Message List is empty
-        msg = f'Unable to perform GET operation, no message was found in topic = {topicName}'
-        sendErrorMsg(socket, clientId, msg)
+        msg = f'-1/Unable to perform GET operation, no message was found in topic = {topicName}'
+        sendMsg(socket, clientId, msg)
         return -1
     
     subscribers = topicFile[topicIndex]["subscribers"]
-    # print(f'subscribers = {subscribers}')
-
-    # if client_message_id == '0':
-    #     messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
-    #     message_content = f'#{messageId}-{messages[0]["message_content"]}'
-    #     sendMsg(socket, clientId, message_content)
-    #     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
-    #     return 0
 
     for index, subscriber in enumerate(subscribers):  # Check if subscriber exist
         # print(f'{subscriber["subscriber_id"]} compare {clientId}')
         if subscriber["subscriber_id"] == clientId: 
             
-
-            if client_message_id == '0':
-                messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
-                message_content = f'#{messageId}-{messages[0]["message_content"]}'
+            if client_message_id == '0': # If '0' is sent, then send whatever is first on message queue of that specific topic
+                messageId = messages[0]["message_id"]
+                message_content = f'{messageId}/{messages[0]["message_content"]}'
 
                 topicFile[topicIndex]["subscribers"][index]["messages_id"] = messageId
                 jsonToFile()
@@ -117,43 +107,27 @@ def get(clientId, topicName, socket, client_message_id):
                 print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
                 return 0
             
-            messages = topicFile[topicIndex]["messages"]
-
-            # If client asks for with id = 0, then return first message on list
-            # if client_message_id == '0' and len(messages) > 0:
-            #     messageId = messages[0]["messages_id"] + 1
-            #     message_content = f'#{messageId}-{messages[0]["message_content"]}'
-            #     sendMsg(socket, clientId, message_content)
-            #     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
-            #     return 0
-            
-            messageId = int(client_message_id) + 1
-            for message in messages:    # Check if associated message exists
+            messageId = int(client_message_id) 
+            for message in messages:    # Check if associated message id exists in the queue, if yes then send it 
                 if message["message_id"] == messageId:
                     
-                    # Increment message id and save the file, this value will let us know the progress of each client and used for deletion of messages
                     topicFile[topicIndex]["subscribers"][index]["messages_id"] = messageId
                     jsonToFile()
                     
-                    message_content = f'#{messageId}-{message["message_content"]}'
+                    message_content = f'{messageId}/{message["message_content"]}'
                     sendMsg(socket, clientId, message_content)
                     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
                     return 0
 
-            msg = f'Unable to perform GET operation, no message was found in topic = {topicName}'
-            sendErrorMsg(socket, clientId, msg)
+            msg = f'-1/Unable to perform GET operation, no message was found in topic = {topicName}'
+            sendMsg(socket, clientId, msg)
             return -1
         
-    msg = f'Unable to perform GET operation, subscriber is not subscribed to topic = {topicName}!'
-    sendErrorMsg(socket, clientId, msg)
+    msg = f'-1/Unable to perform GET operation, subscriber is not subscribed to topic = {topicName}!'
+    sendMsg(socket, clientId, msg)
 
     return -1
 
-def sendErrorMsg(socket, clientId, message):
-    msg = f'ERROR: {message}'
-    socket.send_multipart(
-            [bytes(clientId, 'utf-8'), b'', msg.encode('utf-8')])
-    print(msg)
 
 def sendMsg(socket, clientId, message):
     socket.send_multipart(
@@ -210,8 +184,16 @@ def sub(client_id, topic_name, socket):
     addFlag = True
     #indíce do tópico associado
     indexTopic = findTopicIndex(topic_name)
+    
+
+    
+
     if indexTopic >= 0:
-        newSub = {"subscriber_id": client_id, "messages_id": 0}
+        last_message_id = 0
+        if len(topicFile[indexTopic]["messages"]) > 0:
+            last_message_id = topicFile[indexTopic]["messages"][-1]["message_id"]
+
+        newSub = {"subscriber_id": client_id, "messages_id": last_message_id}
         
         #verify if the subscribe is already subscribed 
         for subscriber in topicFile[indexTopic]["subscribers"]:
@@ -291,7 +273,7 @@ def parse_msg(socket, message):
 
     # Invalid message
     error_msg = "Invalid message, please send again in formart: <nodeid> <command> <topic_name> [message]"
-    sendErrorMsg(socket, client_id, error_msg)
+    sendMsg(socket, client_id, error_msg)
 
     
     return -1

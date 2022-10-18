@@ -77,7 +77,7 @@ def put(clientId, topicName, message, socket):
     return
 
 
-def get(clientId, topicName, socket):
+def get(clientId, topicName, socket, message_status):
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform GET operation, topic = {topicName} does not exist!'
@@ -87,8 +87,9 @@ def get(clientId, topicName, socket):
     subscribers = topicFile[topicIndex]["subscribers"]
 
     for index, subscriber in enumerate(subscribers):  # Check if subscriber exist
-        if subscriber["subscriber_id"]==clientId: 
-            messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
+        if subscriber["subscriber_id"] == clientId: 
+            # messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
+            messageId = int(message_status) + 1
             
             messages = topicFile[topicIndex]["messages"]
             for message in messages:    # Check if associated message exists
@@ -96,8 +97,9 @@ def get(clientId, topicName, socket):
                     # Increment message id and save the file
                     topicFile[topicIndex]["subscribers"][index]["messages_id"] += 1
                     jsonToFile()
-
-                    message_content = message["message_content"]
+                    
+                    
+                    message_content = f'#{messageId}-{message["message_content"]}'
                     sendMsg(socket, clientId, message_content)
                     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
                     return 0
@@ -225,7 +227,8 @@ def parse_msg(socket, message):
     topic_name = tokens[2]
 
     if operation == "GET":
-        get(client_id, topic_name, socket)
+        message_status = tokens[3]
+        get(client_id, topic_name, socket, message_status)
         return 0
 
     elif operation == "PUT":

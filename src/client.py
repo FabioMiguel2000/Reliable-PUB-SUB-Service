@@ -28,7 +28,7 @@ def get(socket: zmq.Socket, client_id, topic: str) -> None:
 
     message_id = message[1:2]
 
-    if message_id == str(int(message_status )+ 1):
+    if message_id == str(int(message_status )+ 1) or message_status == '0':
         increment_message_status(client_id, topic, message_id)
         print(f'Message Successfully received with \nid = {message_id}\nmessage content = {message}')
     else:
@@ -61,7 +61,7 @@ def sub(socket: zmq.Socket, client_id, topic: str) -> None:
     return 
 
 def load_message_status(client_id, topic):
-    filename = f'status_{client_id}/{topic}.txt'
+    filename = f'status/status_{client_id}/{topic}.txt'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     try:
         with open(filename, "r+") as f:
@@ -72,7 +72,7 @@ def load_message_status(client_id, topic):
             return "0"
 
 def increment_message_status(client_id, topic, message_id):
-    filename = f'status_{client_id}/{topic}.txt'
+    filename = f'status/status_{client_id}/{topic}.txt'
     f =  open(filename, "w+") 
     # status_file = open(f"client_{client_id}.txt", 'w+')
     # print(f'file content = {f.read()}')

@@ -77,32 +77,69 @@ def put(clientId, topicName, message, socket):
     return
 
 
-def get(clientId, topicName, socket, message_status):
+def get(clientId, topicName, socket, client_message_id):
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform GET operation, topic = {topicName} does not exist!'
         sendErrorMsg(socket, clientId, msg)
         return -1
     
+    messages = topicFile[topicIndex]["messages"]
+
+    if len(messages) == 0: # Message List is empty
+        msg = f'Unable to perform GET operation, no message was found in topic = {topicName}'
+        sendErrorMsg(socket, clientId, msg)
+        return -1
+    
     subscribers = topicFile[topicIndex]["subscribers"]
+    # print(f'subscribers = {subscribers}')
+
+    # if client_message_id == '0':
+    #     messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
+    #     message_content = f'#{messageId}-{messages[0]["message_content"]}'
+    #     sendMsg(socket, clientId, message_content)
+    #     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
+    #     return 0
 
     for index, subscriber in enumerate(subscribers):  # Check if subscriber exist
+        # print(f'{subscriber["subscriber_id"]} compare {clientId}')
         if subscriber["subscriber_id"] == clientId: 
-            # messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
-            messageId = int(message_status) + 1
+            
+
+            if client_message_id == '0':
+                messageId = subscriber["messages_id"] + 1  # Don't think we will need this, because the client will send the message id
+                message_content = f'#{messageId}-{messages[0]["message_content"]}'
+
+                topicFile[topicIndex]["subscribers"][index]["messages_id"] = messageId
+                jsonToFile()
+                sendMsg(socket, clientId, message_content)
+                
+                print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
+                return 0
             
             messages = topicFile[topicIndex]["messages"]
+
+            # If client asks for with id = 0, then return first message on list
+            # if client_message_id == '0' and len(messages) > 0:
+            #     messageId = messages[0]["messages_id"] + 1
+            #     message_content = f'#{messageId}-{messages[0]["message_content"]}'
+            #     sendMsg(socket, clientId, message_content)
+            #     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
+            #     return 0
+            
+            messageId = int(client_message_id) + 1
             for message in messages:    # Check if associated message exists
                 if message["message_id"] == messageId:
-                    # Increment message id and save the file
-                    topicFile[topicIndex]["subscribers"][index]["messages_id"] += 1
-                    jsonToFile()
                     
+                    # Increment message id and save the file, this value will let us know the progress of each client and used for deletion of messages
+                    topicFile[topicIndex]["subscribers"][index]["messages_id"] = messageId
+                    jsonToFile()
                     
                     message_content = f'#{messageId}-{message["message_content"]}'
                     sendMsg(socket, clientId, message_content)
                     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
                     return 0
+
             msg = f'Unable to perform GET operation, no message was found in topic = {topicName}'
             sendErrorMsg(socket, clientId, msg)
             return -1

@@ -13,11 +13,11 @@
         },
         {
             "message_id": 2,
-            "message_content": "Lisbon weather is 20C"
+            "message_content": "Porto weather is 24C"
         },
         {
             "message_id": 3,
-            "message_content": "Faro weather is 22C"
+            "message_content": "Porto weather is 36C"
         }
     ]
 }

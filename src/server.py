@@ -1,3 +1,4 @@
+from asyncio import sleep
 from sqlite3 import connect
 import zmq
 import json
@@ -75,6 +76,33 @@ def put(clientId, topicName, message, socket):
 
     return
 
+def drop_messages_list(topic):
+    topicIndex = findTopicIndex(topic)
+    messages = topicFile[topicIndex]["messages"]
+
+    if len(messages) <= 1: # Only drop messages if size of message list is > 1
+        print("QUITTTT")
+        return 0
+
+    subscribers = topicFile[topicIndex]["subscribers"]
+
+    lowest_message_id = 999999
+
+    for subscriber in subscribers:  # lowest id in all subscribers
+        if subscriber["messages_id"] < lowest_message_id:
+            lowest_message_id = int(subscriber["messages_id"])
+    print(f'lowest id = {lowest_message_id}')
+
+    for message in messages:
+        if message["message_id"] <= lowest_message_id:
+            topicFile[topicIndex]["messages"].pop(0)
+
+    jsonToFile()
+    return 
+    
+    
+        
+    
 
 def get(clientId, topicName, socket, client_message_id):
     topicIndex = findTopicIndex(topicName)
@@ -102,6 +130,9 @@ def get(clientId, topicName, socket, client_message_id):
 
                 topicFile[topicIndex]["subscribers"][index]["messages_id"] = messageId
                 jsonToFile()
+
+                drop_messages_list(topicName)
+
                 sendMsg(socket, clientId, message_content)
                 
                 print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
@@ -114,6 +145,8 @@ def get(clientId, topicName, socket, client_message_id):
                     topicFile[topicIndex]["subscribers"][index]["messages_id"] = messageId
                     jsonToFile()
                     
+                    drop_messages_list(topicName)
+
                     message_content = f'{messageId}/{message["message_content"]}'
                     sendMsg(socket, clientId, message_content)
                     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
@@ -185,15 +218,8 @@ def sub(client_id, topic_name, socket):
     #indíce do tópico associado
     indexTopic = findTopicIndex(topic_name)
     
-
-    
-
     if indexTopic >= 0:
-        last_message_id = 0
-        if len(topicFile[indexTopic]["messages"]) > 0:
-            last_message_id = topicFile[indexTopic]["messages"][-1]["message_id"]
-
-        newSub = {"subscriber_id": client_id, "messages_id": last_message_id}
+        newSub = {"subscriber_id": client_id, "messages_id": 0}
         
         #verify if the subscribe is already subscribed 
         for subscriber in topicFile[indexTopic]["subscribers"]:
@@ -290,9 +316,11 @@ def main():
 
 
     while True:
+
         socks = dict(poller.poll())
 
         if socks.get(socket) == zmq.POLLIN:
+            
             message = socket.recv()
             print("Message received :" ,message.decode('utf-8'))
 

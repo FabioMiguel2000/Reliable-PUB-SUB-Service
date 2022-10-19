@@ -1,4 +1,6 @@
+from socket import socket
 from sqlite3 import connect
+from time import sleep
 import zmq
 import json
 
@@ -282,7 +284,7 @@ def main():
     # exemple code from https://zguide.zeromq.org/docs/chapter2/ in rrbroker (Extended Request-Reply)
     context = zmq.Context()
     socket = context.socket(zmq.ROUTER)
-    socket.setsockopt(zmq.ROUTER_MANDATORY, 1)
+    #socket.setsockopt(zmq.ROUTER_MANDATORY, 1)
     socket.bind("tcp://*:5559")
 
     poller = zmq.Poller()

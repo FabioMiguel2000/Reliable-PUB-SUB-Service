@@ -1,1 +1,23 @@
-{"topic_name": "weather", "subscribers": [{"subscriber_id": "1", "messages_id": 0}], "messages": [{"message_id": 1, "message_content": "Porto weather is 12C"}, {"message_id": 2, "message_content": "Lisbon weather is 20C"}, {"message_id": 3, "message_content": "Faro weather is 22C"}]}
+{
+    "topic_name": "weather",
+    "subscribers": [
+        {
+            "subscriber_id": "1",
+            "messages_id": 0
+        }
+    ],
+    "messages": [
+        {
+            "message_id": 1,
+            "message_content": "Porto weather is 12C"
+        },
+        {
+            "message_id": 2,
+            "message_content": "Lisbon weather is 20C"
+        },
+        {
+            "message_id": 3,
+            "message_content": "Faro weather is 22C"
+        }
+    ]
+}

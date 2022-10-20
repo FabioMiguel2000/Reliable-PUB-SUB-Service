@@ -16,11 +16,8 @@ def put(socket: zmq.Socket, context, client_id, topic: str, message: str) -> Non
     print("PUT Topic: " + topic + " Message: " + message)
 
     request_message = f'{client_id} PUT {topic} {message}'.encode('utf-8')
-    # socket.send(request_message)
 
     lazyPirate(socket, context, request_message)
-    # message = socket.recv()
-    # print("Resposta do PUT: " ,message)
 
     return
 
@@ -31,11 +28,8 @@ def get(socket: zmq.Socket, context, client_id, topic: str) -> None:
 
     request_message = f'{client_id} GET {topic} {message_status}'.encode('utf-8')
 
-    # socket.send(request_message)
-
     reply = lazyPirate(socket, context, request_message)
 
-    
     message_id, message_content = parse_get_msg(reply)
 
     if int(message_id) < 0:
@@ -52,7 +46,6 @@ def get(socket: zmq.Socket, context, client_id, topic: str) -> None:
     return 0
 
 def parse_get_msg(message: bytes)-> list:
-
     message_splited = message.decode("utf-8").split("/", 1)
     
     message_id = message_splited[0]
@@ -66,12 +59,7 @@ def unsub(socket: zmq.Socket, context, client_id, topic: str) -> None:
 
     request_message = f'{client_id} UNSUB {topic}'.encode('utf-8')
 
-    # socket.send(request_message)
-
     lazyPirate(socket, context, request_message)
-    
-    # message = socket.recv()
-    # print("Resposta do UNSUB: " ,message)
 
     return 
 
@@ -104,36 +92,8 @@ def sub(socket: zmq.Socket, context, client_id, topic: str) -> None:
 
     request_message = f'{client_id} SUB {topic}'.encode('utf-8')
 
-    # socket.send(request_message)
-
     lazyPirate(socket, context, request_message)
-    # retries_left = REQUEST_RETRIES
-    # while TRUE:
-    #     if (socket.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
-    #         message = socket.recv()
-    #         print("Resposta do SUB: " ,message)
-    #         retries_left = REQUEST_RETRIES
-    #         break
-
-    #     retries_left -= 1
-
-    #     print("No response from server")
-    #     # Socket is confused. Close and remove it.
-    #     socket.setsockopt(zmq.LINGER, 0)
-    #     socket.close()
-    #     if retries_left == 0:
-    #         print("Server seems to be offline, abandoning")
-    #         sys.exit()
-
-    #     # Create new connection
-    #     print("Reconnecting to server…")
-    #     socket = context.socket(zmq.REQ)
-    #     socket.setsockopt_string(zmq.IDENTITY, client_id)
-    #     socket.connect(SERVER_ENDPOINT)
-    #     socket.send(f'{client_id} SUB {topic}'.encode('utf-8'))
-
         
-
     return 
 
 def load_message_status(client_id, topic):
@@ -167,7 +127,7 @@ def main():
 
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.setsockopt_string(zmq.IDENTITY, client_id) 
+    # socket.setsockopt_string(zmq.IDENTITY, client_id) 
     socket.connect(SERVER_ENDPOINT)
 
     socket.send(f'{client_id} Node connecting...'.encode('utf-8'))

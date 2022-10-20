@@ -1,5 +1,6 @@
 from asyncio import sleep
 from sqlite3 import connect
+from time import sleep
 import zmq
 import json
 
@@ -55,7 +56,7 @@ def put(clientId, topicName, message, socket):
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'Unable to perform PUT operation, topic = {topicName} does not exist!'
-        sendMsg(socket, clientId, msg)
+        sendMsg(socket, msg)
         return -1
 
     messages = topicFile[topicIndex]["messages"]
@@ -70,9 +71,7 @@ def put(clientId, topicName, message, socket):
     jsonToFile()
         
     msg = f"Put command successfully concluded, message with content = '{message}' was added to topic = {topicName}"
-    sendMsg(socket, clientId, msg)
-    socket.send_multipart(
-        [bytes(clientId, 'utf-8'), b'', msg.encode('utf-8')])
+    sendMsg(socket, msg)
 
     return
 
@@ -108,14 +107,14 @@ def get(clientId, topicName, socket, client_message_id):
     topicIndex = findTopicIndex(topicName)
     if topicIndex == -1: # Topic does not exist
         msg = f'-1/Unable to perform GET operation, topic = {topicName} does not exist!'
-        sendMsg(socket, clientId, msg)
+        sendMsg(socket, msg)
         return -1
     
     messages = topicFile[topicIndex]["messages"]
 
     if len(messages) == 0: # Message List is empty
         msg = f'-1/Unable to perform GET operation, no message was found in topic = {topicName}'
-        sendMsg(socket, clientId, msg)
+        sendMsg(socket, msg)
         return -1
     
     subscribers = topicFile[topicIndex]["subscribers"]
@@ -133,7 +132,7 @@ def get(clientId, topicName, socket, client_message_id):
 
                 drop_messages_list(topicName)
 
-                sendMsg(socket, clientId, message_content)
+                sendMsg(socket, message_content)
                 
                 print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
                 return 0
@@ -148,23 +147,24 @@ def get(clientId, topicName, socket, client_message_id):
                     drop_messages_list(topicName)
 
                     message_content = f'{messageId}/{message["message_content"]}'
-                    sendMsg(socket, clientId, message_content)
+                    sendMsg(socket, message_content)
                     print(f"GET command successfully concluded! Message = {message_content} was sent to client = {clientId}")
                     return 0
 
             msg = f'-1/Unable to perform GET operation, no message was found in topic = {topicName}'
-            sendMsg(socket, clientId, msg)
+            sendMsg(socket, msg)
             return -1
         
     msg = f'-1/Unable to perform GET operation, subscriber is not subscribed to topic = {topicName}!'
-    sendMsg(socket, clientId, msg)
+    sendMsg(socket, msg)
 
     return -1
 
 
-def sendMsg(socket, clientId, message):
-    socket.send_multipart(
-            [bytes(clientId, 'utf-8'), b'', message.encode('utf-8')])
+def sendMsg(socket, message):
+    # socket.send_multipart(
+    #         [bytes(clientId, 'utf-8'), b'', message.encode('utf-8')])
+    socket.send(message.encode('utf-8'))
     print(message)
 
 
@@ -191,8 +191,7 @@ def unsub(client_id, topic_name, socket):
 
     else:
         msg = "Topic doesn't exist"
-        socket.send_multipart(
-            [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+        sendMsg(socket, msg)
         return
 
 
@@ -203,8 +202,7 @@ def unsub(client_id, topic_name, socket):
     else:
         msg = "You were not subscribed in " + topic_name
 
-    socket.send_multipart(
-        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+    sendMsg(socket, msg)
 
     return
 
@@ -243,16 +241,14 @@ def sub(client_id, topic_name, socket):
 
     print(msg)
     
-    socket.send_multipart(
-        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+    sendMsg(socket, msg)
 
     return
 
 
 def connection(socket, client_id):
     msg = "Connection established"
-    socket.send_multipart(
-        [bytes(client_id, 'utf-8'), b'', msg.encode('utf-8')])
+    sendMsg(socket, msg)
 
 def parse_msg(socket, message):
     print(message)
@@ -299,33 +295,21 @@ def parse_msg(socket, message):
 
     # Invalid message
     error_msg = "Invalid message, please send again in formart: <nodeid> <command> <topic_name> [message]"
-    sendMsg(socket, client_id, error_msg)
+    sendMsg(socket, error_msg)
 
     
     return -1
 
 def main():
-    # exemple code from https://zguide.zeromq.org/docs/chapter2/ in rrbroker (Extended Request-Reply)
     context = zmq.Context()
-    socket = context.socket(zmq.ROUTER)
-    socket.setsockopt(zmq.ROUTER_MANDATORY, 1)
+    socket = context.socket(zmq.REP)
     socket.bind("tcp://*:5559")
-
-    poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
 
 
     while True:
-
-        socks = dict(poller.poll())
-
-        if socks.get(socket) == zmq.POLLIN:
-            
-            message = socket.recv()
-            print("Message received :" ,message.decode('utf-8'))
-
-            # TODO: Parse the message information, parse_msg() - message structure maybe = <nodeid> <command> [topic_name]
-            parse_msg(socket, message)
+        message = socket.recv()
+        print("Message received: " ,message.decode('utf-8'))
+        parse_msg(socket, message)
 
     # socket.close()
     # context.term()

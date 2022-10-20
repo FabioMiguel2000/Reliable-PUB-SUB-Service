@@ -1,29 +1,36 @@
 from email import message
+from pickle import TRUE
 import string
+from time import sleep
 import zmq
 import sys
 import os
 
+REQUEST_TIMEOUT = 2500
+REQUEST_RETRIES = 3
+SERVER_ENDPOINT = "tcp://localhost:5559"
+
 
 # TODO just send message, and that's all it needs... leave the rest to server
-def put(socket: zmq.Socket, client_id, topic: str, message: str) -> None:
+def put(socket: zmq.Socket, context, client_id, topic: str, message: str) -> None:
     print("PUT Topic: " + topic + " Message: " + message)
 
-    socket.send(f'{client_id} PUT {topic} {message}'.encode('utf-8'))
+    request_message = f'{client_id} PUT {topic} {message}'.encode('utf-8')
 
-    message = socket.recv()
-    print("Resposta do PUT: " ,message)
+    lazyPirate(socket, context, request_message)
 
     return
 
-def get(socket: zmq.Socket, client_id, topic: str) -> None:
+def get(socket: zmq.Socket, context, client_id, topic: str) -> None:
     print("GET Topic: " + topic )
 
     message_status = load_message_status(client_id, topic)
 
-    socket.send(f'{client_id} GET {topic} {message_status}'.encode('utf-8'))
-    
-    message_id, message_content = parse_get_msg(socket.recv())
+    request_message = f'{client_id} GET {topic} {message_status}'.encode('utf-8')
+
+    reply = lazyPirate(socket, context, request_message)
+
+    message_id, message_content = parse_get_msg(reply)
 
     if int(message_id) < 0:
         print(f'ERROR: {message_content}')
@@ -39,7 +46,6 @@ def get(socket: zmq.Socket, client_id, topic: str) -> None:
     return 0
 
 def parse_get_msg(message: bytes)-> list:
-
     message_splited = message.decode("utf-8").split("/", 1)
     
     message_id = message_splited[0]
@@ -48,25 +54,46 @@ def parse_get_msg(message: bytes)-> list:
     return message_id, message_content
 
 
-def unsub(socket: zmq.Socket, client_id, topic: str) -> None:
+def unsub(socket: zmq.Socket, context, client_id, topic: str) -> None:
     print("UNSUB Topic: " + topic )
 
-    socket.send(f'{client_id} UNSUB {topic}'.encode('utf-8'))
-    
-    message = socket.recv()
-    print("Resposta do UNSUB: " ,message)
+    request_message = f'{client_id} UNSUB {topic}'.encode('utf-8')
+
+    lazyPirate(socket, context, request_message)
 
     return 
 
 
-def sub(socket: zmq.Socket, client_id, topic: str) -> None:
+def lazyPirate(socket: zmq.Socket, context, request_message):
+    socket.send(request_message)
+    retries_left = REQUEST_RETRIES
+    while True:
+        if (socket.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
+            reply = socket.recv()
+            print(f'Server Response: {reply}')
+            retries_left = REQUEST_RETRIES
+            break
+        
+        retries_left -=1
+        print("No Response from Server")
+        socket.setsockopt(zmq.LINGER, 0)
+        socket.close()
+        if retries_left == 0:
+            print("Server Seems to be Offline, abandoning...")
+        print("Reconnecting to Server...")
+        socket = context.socket(zmq.REQ)
+        socket.connect(SERVER_ENDPOINT)
+        print("Resending (%s)")
+        socket.send(request_message)
+    return reply
+
+def sub(socket: zmq.Socket, context, client_id, topic: str) -> None:
     print("SUB Topic: " + topic )
 
-    socket.send(f'{client_id} SUB {topic}'.encode('utf-8'))
-    
-    message = socket.recv()
-    print("Resposta do SUB: " ,message)
+    request_message = f'{client_id} SUB {topic}'.encode('utf-8')
 
+    lazyPirate(socket, context, request_message)
+        
     return 
 
 def load_message_status(client_id, topic):
@@ -97,14 +124,11 @@ def main():
 
     client_id = args[0]
 
-    
-
 
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.setsockopt_string(zmq.IDENTITY, client_id) 
-
-    socket.connect("tcp://localhost:5559")
+    # socket.setsockopt_string(zmq.IDENTITY, client_id) 
+    socket.connect(SERVER_ENDPOINT)
 
     socket.send(f'{client_id} Node connecting...'.encode('utf-8'))
     message = socket.recv()
@@ -122,29 +146,18 @@ def main():
         command = args[0].lower()
         topic = args[1]
 
-        #message = socket.recv()
-        #print(message)
-
         if (len(args) > 2):
              message = " ".join(args[2:])
 
-
         if (command == "put"):
-            put(socket , client_id, topic , message)
+            put(socket , context, client_id, topic , message)
         elif (command == "get"):
-            get(socket, client_id, topic)
+            get(socket, context, client_id, topic)
         elif (command == "sub"):
-            sub(socket, client_id, topic)
+            sub(socket, context, client_id, topic)
         elif (command == "unsub"):
-            unsub(socket, client_id, topic)
+            unsub(socket, context, client_id, topic)
         else:
             print("Invalid command")
-
-
- 
-    # TODO: Read and parse user commands from CLI
-
-    # socket.close()
-    # context.term()
 
 main()

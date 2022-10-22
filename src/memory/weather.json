@@ -1,0 +1,1 @@
+{"topic_name": "weather", "subscribers": [{"subscriber_id": "1", "messages_id": 1}], "messages": [{"message_id": 2, "message_content": "Porto weather is 24C"}, {"message_id": 3, "message_content": "Porto weather is 36C"}]}

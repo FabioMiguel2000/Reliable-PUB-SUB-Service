@@ -115,7 +115,7 @@ def get(clientId, topicName, socket, client_message_id):
     subscribers = topicFile[topicIndex]["subscribers"]
 
     for index, subscriber in enumerate(subscribers):  # Check if subscriber exist
-        # print(f'{subscriber["subscriber_id"]} compare {clientId}')
+        
         if subscriber["subscriber_id"] == clientId: 
             
             if client_message_id == '0': # If '0' is sent, then send whatever is first on message queue of that specific topic
@@ -198,7 +198,7 @@ def unsub(client_id, topic_name, socket):
 
 def sub(client_id, topic_name, socket):
     addFlag = True
-    #indíce do tópico associado
+    
     indexTopic = findTopicIndex(topic_name)
     
     if indexTopic >= 0:
@@ -237,10 +237,7 @@ def connection(socket, client_id):
 
 def parse_msg(socket, message):
     print(message)
-    # PUT msg = 1 PUT TOPIC1 MENSAGEM
-    # GET msg = 1 GET TOPIC1
-    # SUB msg = 1 SUB TOPIC1
-    # UNSUB msg = 1 SUB TOPIC1
+    
     message = message.decode('utf-8')
     tokens = message.split(" ")
     

@@ -133,12 +133,6 @@ def main():
     message = socket.recv()
     print(f"reply: {message}")
 
-
-    # PUT msg = 1 PUT TOPIC1 MENSAGEM
-    # GET msg = 1 GET TOPIC1
-    # SUB msg = 1 SUB TOPIC1
-    # UNSUB msg = 1 SUB TOPIC1
-
     while True:
         print("Enter command: ")
         args = input().split(" ")

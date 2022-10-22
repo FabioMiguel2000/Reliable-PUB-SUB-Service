@@ -79,6 +79,7 @@ def lazyPirate(socket: zmq.Socket, context, request_message):
         socket.close()
         if retries_left == 0:
             print("Server Seems to be Offline, abandoning...")
+            sys.exit()
         print("Reconnecting to Server...")
         socket = context.socket(zmq.REQ)
         socket.connect(SERVER_ENDPOINT)

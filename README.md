@@ -2,6 +2,13 @@
 
 SDLE First Assignment of group T01G14.
 
+Group members:
+
+1. Emanuel Trigo (up201605389@edu.fe.up.pt)
+2. Fábio Huang (up201806829@edu.fe.up.pt)
+3. Sara Pereira (up202204189@edu.fe.up.pt)
+4. Valentina Wu (up201907483@edu.fe.up.pt)
+
 ## Installation and prerequisite
 
 1. Install Python3, see [official website](https://www.python.org/downloads/)
@@ -18,7 +25,7 @@ pip install -r requirements.txt
 ## Usage Guide
 For this publish-subscribe service:
 - The Clients:
-    - Are be able to do the following operations:
+    - Are able to do the following operations:
         - SUB - Subscribes a Topic
         - UNSUB - Unsubscribes a Topic
         - PUT - Publishes a Message on a Topic
@@ -83,11 +90,3 @@ For example, to PUT a message "Porto is very hot today" to the Topic "weather", 
 ```shell
 PUT weather Porto is very hot today
 ```
-
-
-Group members:
-
-1. Emanuel Trigo (up201605389@edu.fe.up.pt)
-2. Fábio Huang (up201806829@edu.fe.up.pt)
-3. Sara Pereira (up202204189@edu.fe.up.pt)
-4. Valentina Wu (up201907483@edu.fe.up.pt)

@@ -11,7 +11,6 @@ REQUEST_RETRIES = 3
 SERVER_ENDPOINT = "tcp://localhost:5559"
 
 
-# TODO just send message, and that's all it needs... leave the rest to server
 def put(socket: zmq.Socket, context, client_id, topic: str, message: str) -> None:
     print("PUT Topic: " + topic + " Message: " + message)
 
@@ -127,7 +126,6 @@ def main():
 
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    # socket.setsockopt_string(zmq.IDENTITY, client_id) 
     socket.connect(SERVER_ENDPOINT)
 
     socket.send(f'{client_id} Node connecting...'.encode('utf-8'))

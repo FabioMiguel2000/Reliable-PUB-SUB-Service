@@ -3,8 +3,6 @@ from sqlite3 import connect
 from time import sleep
 import zmq
 import json
-
-import json
 import os
 
 path = os.getcwd()
@@ -99,9 +97,6 @@ def drop_messages_list(topic):
     jsonToFile()
     return 
     
-    
-        
-    
 
 def get(clientId, topicName, socket, client_message_id):
     topicIndex = findTopicIndex(topicName)
@@ -162,18 +157,12 @@ def get(clientId, topicName, socket, client_message_id):
 
 
 def sendMsg(socket, message):
-    # socket.send_multipart(
-    #         [bytes(clientId, 'utf-8'), b'', message.encode('utf-8')])
     socket.send(message.encode('utf-8'))
     print(message)
 
 
 
 def unsub(client_id, topic_name, socket):
-    # TODO: if topic doesn't exist, ignore message and warn the node
-    # TODO: if topic was not subscribed by this node, ignore message and warn the node
-    # TODO: if topic subcribed by this node, then remove node from this topic and update json file
-    
     msg = ""
     removeFlag = False
     indexTopic = findTopicIndex(topic_name)
@@ -208,10 +197,6 @@ def unsub(client_id, topic_name, socket):
 
 
 def sub(client_id, topic_name, socket):
-    # [x] TODO: if topic does not exist, then create topic (add topic and update json file) and add node to this topic
-    # [x] TODO: if topic exists and node not subscribed to this topic, then add node to this topic
-    # [x] TODO: if topic exists and node already subscribed, ignore message and warn the node that it is already subscribed
-
     addFlag = True
     #indíce do tópico associado
     indexTopic = findTopicIndex(topic_name)
@@ -252,7 +237,6 @@ def connection(socket, client_id):
 
 def parse_msg(socket, message):
     print(message)
-    # TODO: Parse Message, check which operation: GET, PUT, SUB, UNSUB, format: <nodeid> <command> <topic_name> [message]
     # PUT msg = 1 PUT TOPIC1 MENSAGEM
     # GET msg = 1 GET TOPIC1
     # SUB msg = 1 SUB TOPIC1
@@ -313,6 +297,5 @@ def main():
 
     # socket.close()
     # context.term()
-
 
 main()

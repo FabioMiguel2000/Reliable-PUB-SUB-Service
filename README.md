@@ -1,6 +1,6 @@
 # SDLE First Assignment
 
-SDLE First Assignment of group T01G14.
+A Reliable publish-subscribe service that guarantees "exactly-once" delivery of the messages on top of ZeroMQ. Essentially, the system is composed of subscribers and publishers. The publishers can publish a message on a topic and the subscribers of a determined topic receive the messages posted on that topic. Developed in the course of Large Scale Distributed Systems by group T01G14.
 
 Group members:
 
